@@ -3,14 +3,11 @@
 import hashlib
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
-import pytz
 from caldav import DAVClient
 from caldav import Event as CalDAVEvent
 from icalendar import Calendar, Event
-
-OUTLOOK_JSON_FILE = "kalender_full.json"
 
 
 def hash_event(event: Event) -> str:
@@ -38,9 +35,11 @@ def create_icalendar_event(json_event) -> Event:
     event.add("uid", json_event["iCalUId"])
     event.add("summary", json_event["subject"])
     event.add(
-        "dtstart", datetime.fromisoformat(json_event["startWithTimeZone"]).astimezone(pytz.utc)
+        "dtstart", datetime.fromisoformat(json_event["startWithTimeZone"]).astimezone(timezone.utc)
     )
-    event.add("dtend", datetime.fromisoformat(json_event["endWithTimeZone"]).astimezone(pytz.utc))
+    event.add(
+        "dtend", datetime.fromisoformat(json_event["endWithTimeZone"]).astimezone(timezone.utc)
+    )
     # event.add("description", json_event.get("body", ""))
     event.add("location", json_event.get("location", ""))
     # event.add("url", json_event.get("webLink", ""))
@@ -49,7 +48,7 @@ def create_icalendar_event(json_event) -> Event:
 
 def main():
     """Main function to sync Outlook calendar with CalDAV server."""
-    logging.basicConfig(level=logging.DEBUG, format="[%(levelname)s] %(message)s")
+    logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
 
     # Load config
     with open("config.json", "r", encoding="utf-8") as f:
@@ -57,15 +56,15 @@ def main():
 
     # Connect to CalDAV
     client = DAVClient(
-        url=config["dav_url"], username=config["username"], password=config["password"]
+        url=config["dav_url"], username=config["dav_username"], password=config["dav_password"]
     )
     principal = client.principal()
-    calendar = principal.calendar(cal_id=config["calendar"])
+    calendar = principal.calendar(cal_id=config["dav_calendar"])
 
     # Define time window for fetching existing events
-    now = datetime.utcnow().astimezone(pytz.utc)
+    now = datetime.now(timezone.utc)
     past = now - timedelta(days=3)
-    future = now + timedelta(days=365)
+    future = now + timedelta(days=730)  # max. 2 years
 
     logging.info("Fetching events from CalDAV server...")
     remote_events = calendar.search(comp_class=CalDAVEvent, start=past, end=future)
@@ -83,7 +82,7 @@ def main():
     logging.info("Found %d existing remote events", len(existing_hashes))
 
     # Load Outlook events from JSON
-    with open(OUTLOOK_JSON_FILE, "r", encoding="utf-8") as f:
+    with open(config["outlook_calendar_file"], "r", encoding="utf-8") as f:
         outlook_entries = json.load(f)
 
     created, updated, skipped = 0, 0, 0
