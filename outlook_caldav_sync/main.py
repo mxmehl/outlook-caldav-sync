@@ -10,12 +10,11 @@ from caldav import DAVClient
 from caldav import Event as CalDAVEvent
 from icalendar import Calendar, Event
 
-OUTLOOK_JSON_FILE = "kalender.json"
+OUTLOOK_JSON_FILE = "kalender_full.json"
 
 
 def hash_event(event: Event) -> str:
     """Hash the content-relevant parts of an event for comparison."""
-    logging.debug("Hashing event %s", event.get("summary"))
     keys = ["dtstart", "dtend"]
     content = "|".join(str(event.get(k)) for k in keys)
     hashsum = hashlib.sha256(content.encode("utf-8")).hexdigest()
@@ -42,9 +41,9 @@ def create_icalendar_event(json_event) -> Event:
         "dtstart", datetime.fromisoformat(json_event["startWithTimeZone"]).astimezone(pytz.utc)
     )
     event.add("dtend", datetime.fromisoformat(json_event["endWithTimeZone"]).astimezone(pytz.utc))
-    event.add("description", json_event.get("body", ""))
+    # event.add("description", json_event.get("body", ""))
     event.add("location", json_event.get("location", ""))
-    event.add("url", json_event.get("webLink", ""))
+    # event.add("url", json_event.get("webLink", ""))
     return event
 
 
