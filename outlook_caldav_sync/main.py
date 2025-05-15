@@ -44,6 +44,26 @@ def parse_ics_events(ics_data: str) -> dict:
     return uid_map
 
 
+def get_short_info_from_event_dict(
+    event: dict[str, str], title_key: str = "subject", start_key: str = "start"
+) -> tuple[str, str]:
+    """Extract short info from a JSON event.
+
+    Args:
+        outlook_event (dict): Event data from Outlook JSON export.
+        title_key (str): Key for the event title. Default is "subject".
+        start_key (str): Key for the event start time. Default is "start".
+
+    Returns:
+        tuple: Tuple containing UID and dictionars (summary + start time).
+    """
+    uid = event.get("iCalUId", "")
+    subject = event.get(title_key, "")
+    start_time = event.get(start_key, "")
+    description = f"{subject} ({start_time})"
+    return uid, description
+
+
 def create_icalendar_event(json_event: dict[str, str]) -> Event:
     """Convert a JSON calendar entry to an iCalendar VEVENT.
 
@@ -63,7 +83,6 @@ def create_icalendar_event(json_event: dict[str, str]) -> Event:
         "dtend", datetime.fromisoformat(json_event["endWithTimeZone"]).astimezone(timezone.utc)
     )
     event.add("location", json_event.get("location", ""))
-
     return event
 
 
@@ -115,6 +134,84 @@ def get_existing_event_hashes(
     return hashes
 
 
+def caldav_event_to_dict(event: Event) -> dict[str, str]:
+    """Converts most important elements of a VEVENT to a plain dictionary with string values."""
+    return {
+        "SUMMARY": str(event.get("SUMMARY")),
+        "DTSTART": str(event.get("DTSTART").dt),
+        "DTEND": str(event.get("DTEND").dt),
+        "DTSTAMP": str(event.get("DTSTAMP").dt),
+        "UID": str(event.get("UID")),
+        "LOCATION": str(event.get("LOCATION")),
+    }
+
+
+def delete_missing_events(
+    calendar: CalDAVCalendar,
+    outlook_entries: list[dict[str, str]],
+    delete_enabled: bool = True,
+) -> int:
+    """Delete CalDAV events that are not in Outlook JSON but within the JSON date range.
+
+    Args:
+        calendar (CalDAVCalendar): CalDAV calendar object.
+        outlook_entries (list): List of Outlook event dictionaries.
+        delete_enabled (bool): Whether deletion is enabled.
+
+    Returns:
+        int: Number of deleted events.
+    """
+    if not delete_enabled:
+        logging.info("Deletion of missing events is disabled by config.")
+        return 0
+
+    if not outlook_entries:
+        logging.warning("No Outlook entries loaded; skipping deletion check.")
+        return 0
+
+    # Determine JSON event date range
+    json_start_times = [
+        datetime.fromisoformat(e.get("startWithTimeZone", "")).astimezone(timezone.utc)
+        for e in outlook_entries
+        if "startWithTimeZone" in e
+    ]
+    json_start_min = min(json_start_times)
+    json_start_max = max(json_start_times)
+
+    # Collect UIDs from Outlook
+    json_uids = {e.get("iCalUId", "") for e in outlook_entries if "iCalUId" in e}
+
+    # Find CalDAV events in the same time window
+    remote_events: list[CalDAVEvent] = calendar.search(  # type: ignore
+        comp_class=CalDAVEvent, start=json_start_min, end=json_start_max  # type: ignore
+    )
+
+    deleted = 0
+    for e in remote_events:
+        try:
+            ical: dict[str, str] = caldav_event_to_dict(e.icalendar_component)
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            logging.warning("Skipping broken event %s: %s", e, err)
+            continue
+
+        uid, description = get_short_info_from_event_dict(
+            event=ical, title_key="SUMMARY", start_key="DTSTART"
+        )
+
+        try:
+            if uid:
+                if uid not in json_uids:
+                    e.delete()
+                    logging.info("Deleted stale event: %s (UID: %s)", description, uid)
+                    deleted += 1
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            logging.warning("Failed to delete event %s (UID: %s): %s", description, uid, err)
+
+    logging.debug("Deletion pass complete. Deleted %d events.", deleted)
+
+    return deleted
+
+
 def sync_events(config: dict, calendar: CalDAVCalendar, existing_hashes: dict[str, str]) -> None:
     """Sync Outlook JSON events to the CalDAV server.
 
@@ -123,18 +220,19 @@ def sync_events(config: dict, calendar: CalDAVCalendar, existing_hashes: dict[st
         calendar (Calendar): CalDAV calendar object.
         existing_hashes (dict): Existing event hashes.
     """
+    created, updated, skipped, deleted = 0, 0, 0, 0
+
+    # Load Outlook JSON data
     with open(config.get("outlook_calendar_file", None), "r", encoding="utf-8") as f:
         outlook_entries: list[dict[str, str]] = json.load(f)
-
-    created, updated, skipped = 0, 0, 0
+        logging.info("Processing %d events from Outlook JSON", len(outlook_entries))
 
     for item in outlook_entries:
-        uid = item.get("iCalUId", None)
+        uid, description = get_short_info_from_event_dict(item)
         if not uid:
             logging.warning("Skipping event without UID: %s", item)
             continue
 
-        description = f"{item.get('subject')} ({item.get('start')})"
         new_event: Event = create_icalendar_event(item)
         new_hash = hash_event(new_event)
 
@@ -153,7 +251,16 @@ def sync_events(config: dict, calendar: CalDAVCalendar, existing_hashes: dict[st
         except Exception as e:  # pylint: disable=broad-exception-caught
             logging.error("Failed to upload event %s (UID: %s): %s", description, uid, e)
 
-    logging.info("Done. Created: %d, Updated: %d, Skipped: %d", created, updated, skipped)
+    # Optional deletion step
+    deleted = delete_missing_events(calendar, outlook_entries, config.get("delete_missing", True))
+
+    logging.info(
+        "Done. Created: %d, Updated: %d, Skipped: %d, Deleted: %d",
+        created,
+        updated,
+        skipped,
+        deleted,
+    )
 
 
 def main():
