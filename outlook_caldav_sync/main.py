@@ -1,5 +1,6 @@
 """Sync Outlook calendar with CalDAV server using ICS export and JSON import."""
 
+import argparse
 import hashlib
 import json
 import logging
@@ -9,6 +10,29 @@ from caldav import Calendar as CalDAVCalendar
 from caldav import DAVClient
 from caldav import Event as CalDAVEvent
 from icalendar import Calendar, Event
+
+
+def configure_logger(log_file: str = "", verbose: bool = False) -> logging.Logger:
+    """Set logging options"""
+    log_handlers = [logging.StreamHandler()]
+    if log_file:
+        log_handlers.append(
+            logging.FileHandler(log_file, mode="a", encoding="utf-8")  # type: ignore
+        )
+
+    log = logging.getLogger()
+    logging.basicConfig(
+        encoding="utf-8",
+        format="[%(asctime)s] %(levelname)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        handlers=log_handlers,
+    )
+    if verbose:
+        log.setLevel(logging.DEBUG)
+    else:
+        log.setLevel(logging.INFO)
+
+    return log
 
 
 def hash_event(event: Event) -> str:
@@ -265,17 +289,45 @@ def sync_events(config: dict, calendar: CalDAVCalendar, existing_hashes: dict[st
 
 def main():
     """Main entry point."""
-    logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
+    parser = argparse.ArgumentParser(description="Sync Outlook JSON calendar to CalDAV")
+    parser.add_argument(
+        "-c",
+        "--config",
+        type=str,
+        required=True,
+        help="Path to the configuration file (default: config.json)",
+    )
+    parser.add_argument(
+        "-i",
+        "--calendar-input",
+        type=str,
+        required=True,
+        help="Path to the Outlook JSON calendar export file",
+    )
+    parser.add_argument("-vv", "--debug", action="store_true", help="Enable DEBUG logging")
+    args = parser.parse_args()
 
-    # Load configuration
-    with open("config.json", "r", encoding="utf-8") as f:
+    # --------------------------------------------------
+    # HANDLE CONFIGURATION AND ARGUMENTS
+    # --------------------------------------------------
+    # Load configuration file
+    with open(args.config, "r", encoding="utf-8") as f:
         config = json.load(f)
 
-    # Time window
+    # Update config with command line arguments
+    config["outlook_calendar_file"] = args.calendar_input
+
+    # Configure logging (file + console)
+    configure_logger(config.get("log_file", ""), args.debug)
+
+    # Set Time window
     now = datetime.now(timezone.utc)
     past = now - timedelta(days=config.get("dav_past_days", 3))
-    future = now + timedelta(days=config.get("dav_future_days", 730))
+    future = now + timedelta(days=config.get("dav_future_days", 365))
 
+    # --------------------------------------------------
+    # SYNC CALENDAR
+    # --------------------------------------------------
     calendar = connect_to_caldav(config)
     existing_hashes = get_existing_event_hashes(calendar, past, future)
     sync_events(config, calendar, existing_hashes)
