@@ -44,7 +44,7 @@ def hash_event(event: Event) -> str:
     Returns:
         str: Hex digest of the event hash.
     """
-    keys = ["dtstart", "dtend"]
+    keys = ["summary", "dtstart", "dtend"]
     content = "|".join(str(event.get(k)) for k in keys)
     hashsum = hashlib.sha256(content.encode("utf-8")).hexdigest()
     logging.debug("Hash of event %s is %s", event.get("summary"), hashsum)
@@ -81,10 +81,13 @@ def get_short_info_from_event_dict(
     Returns:
         tuple: Tuple containing UID and dictionars (summary + start time).
     """
-    uid = event.get("iCalUId", "")
+    uid = event.get("iCalUId") or event.get("UID", "")
     subject = event.get(title_key, "")
     start_time = event.get(start_key, "")
     description = f"{subject} ({start_time})"
+    if not uid:
+        logging.warning("Event without UID: %s", description)
+        return "", description
     return uid, description
 
 
