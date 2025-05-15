@@ -89,6 +89,7 @@ def main():
 
     for item in outlook_entries:
         uid = item.get("iCalUId")
+        description = f"{item.get('subject')} ({item.get('start')})"
         if not uid:
             continue
 
@@ -102,13 +103,15 @@ def main():
         try:
             calendar.add_event(new_event.to_ical())
             if uid in existing_hashes:
-                logging.info("Updated event: %s", uid)
+                logging.info("Updated event: %s", description)
+                logging.debug("Updated Event UID: %s", uid)
                 updated += 1
             else:
-                logging.info("Created event: %s", uid)
+                logging.info("Created event: %s", description)
+                logging.debug("Created Event UID: %s", uid)
                 created += 1
         except Exception as e:
-            logging.error("Failed to upload event %s: %s", uid, e)
+            logging.error("Failed to upload event %s (UID: %s): %s", description, uid, e)
 
     logging.info("Done. Created: %d, Updated: %d, Skipped: %d", created, updated, skipped)
 
