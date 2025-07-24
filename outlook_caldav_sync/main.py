@@ -91,6 +91,23 @@ def get_short_info_from_event_dict(
     return uid, description
 
 
+def add_attendees_to_event(event: Event, attendees: str, role: str) -> None:
+    """Add attendees to an iCalendar event.
+
+    Args:
+        event (Event): iCalendar event.
+        attendees (str): Semicolon-separated list of attendee email addresses.
+        role (str): Role of the attendees (e.g., "REQ-PARTICIPANT", "OPT-PARTICIPANT").
+    """
+    for attendee in attendees.split(";"):
+        if attendee := attendee.strip():
+            event.add(
+                name="attendee",
+                value=attendee,
+                parameters={"ROLE": role},
+            )
+
+
 def create_icalendar_event(json_event: dict[str, str]) -> Event:
     """Convert a JSON calendar entry to an iCalendar VEVENT.
 
@@ -110,6 +127,13 @@ def create_icalendar_event(json_event: dict[str, str]) -> Event:
         "dtend", datetime.fromisoformat(json_event["endWithTimeZone"]).astimezone(timezone.utc)
     )
     event.add("location", json_event.get("location", ""))
+    # Add organizer and attendees
+    event.add(
+        name="organizer",
+        value=json_event.get("organizer", ""),
+    )
+    add_attendees_to_event(event, json_event.get("requiredAttendees", ""), "REQ-PARTICIPANT")
+    add_attendees_to_event(event, json_event.get("optionalAttendees", ""), "OPT-PARTICIPANT")
     return event
 
 
