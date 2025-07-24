@@ -270,6 +270,7 @@ def sync_events(  # pylint: disable=too-many-locals
     calendar: CalDAVCalendar,
     existing_hashes: dict[str, str],
     dry: bool = False,
+    force: bool = False,
 ) -> None:
     """Sync Outlook JSON events to the CalDAV server.
 
@@ -294,7 +295,7 @@ def sync_events(  # pylint: disable=too-many-locals
         new_event: Event = create_icalendar_event(item)
         new_hash = hash_event(new_event)
 
-        if uid in existing_hashes and existing_hashes[uid] == new_hash:
+        if uid in existing_hashes and existing_hashes[uid] == new_hash and not force:
             skipped += 1
             continue
 
@@ -344,6 +345,12 @@ def main():
         required=True,
         help="Path to the Outlook JSON calendar export file",
     )
+    parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="Force update of remote events even if they seem to be equal",
+    )
     parser.add_argument("-vv", "--debug", action="store_true", help="Enable DEBUG logging")
     parser.add_argument("--dry", action="store_true", help="Dry run mode (no changes made)")
     args = parser.parse_args()
@@ -371,7 +378,7 @@ def main():
     # --------------------------------------------------
     calendar = connect_to_caldav(config)
     existing_hashes = get_existing_event_hashes(calendar, past, future)
-    sync_events(config, calendar, existing_hashes, dry=args.dry)
+    sync_events(config, calendar, existing_hashes, dry=args.dry, force=args.force)
 
 
 if __name__ == "__main__":
