@@ -177,6 +177,7 @@ def delete_missing_events(
     calendar: CalDAVCalendar,
     outlook_entries: list[dict[str, str]],
     delete_enabled: bool = True,
+    dry: bool = False,
 ) -> int:
     """Delete CalDAV events that are not in Outlook JSON but within the JSON date range.
 
@@ -228,7 +229,8 @@ def delete_missing_events(
         try:
             if uid:
                 if uid not in json_uids:
-                    e.delete()
+                    if not dry:
+                        e.delete()
                     logging.info("Deleted stale event: %s (UID: %s)", description, uid)
                     deleted += 1
         except Exception as err:  # pylint: disable=broad-exception-caught
@@ -239,7 +241,12 @@ def delete_missing_events(
     return deleted
 
 
-def sync_events(config: dict, calendar: CalDAVCalendar, existing_hashes: dict[str, str]) -> None:
+def sync_events(  # pylint: disable=too-many-locals
+    config: dict,
+    calendar: CalDAVCalendar,
+    existing_hashes: dict[str, str],
+    dry: bool = False,
+) -> None:
     """Sync Outlook JSON events to the CalDAV server.
 
     Args:
@@ -268,7 +275,8 @@ def sync_events(config: dict, calendar: CalDAVCalendar, existing_hashes: dict[st
             continue
 
         try:
-            calendar.add_event(new_event.to_ical().decode("utf-8"))
+            if not dry:
+                calendar.add_event(new_event.to_ical().decode("utf-8"))
             if uid in existing_hashes:
                 logging.info("Updated event: %s", description)
                 updated += 1
@@ -279,7 +287,12 @@ def sync_events(config: dict, calendar: CalDAVCalendar, existing_hashes: dict[st
             logging.error("Failed to upload event %s (UID: %s): %s", description, uid, e)
 
     # Optional deletion step
-    deleted = delete_missing_events(calendar, outlook_entries, config.get("delete_missing", True))
+    deleted = delete_missing_events(
+        calendar,
+        outlook_entries,
+        config.get("delete_missing", True),
+        dry=dry,
+    )
 
     logging.info(
         "Done. Created: %d, Updated: %d, Skipped: %d, Deleted: %d",
@@ -308,6 +321,7 @@ def main():
         help="Path to the Outlook JSON calendar export file",
     )
     parser.add_argument("-vv", "--debug", action="store_true", help="Enable DEBUG logging")
+    parser.add_argument("--dry", action="store_true", help="Dry run mode (no changes made)")
     args = parser.parse_args()
 
     # --------------------------------------------------
@@ -333,7 +347,7 @@ def main():
     # --------------------------------------------------
     calendar = connect_to_caldav(config)
     existing_hashes = get_existing_event_hashes(calendar, past, future)
-    sync_events(config, calendar, existing_hashes)
+    sync_events(config, calendar, existing_hashes, dry=args.dry)
 
 
 if __name__ == "__main__":
