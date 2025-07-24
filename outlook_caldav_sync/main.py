@@ -91,24 +91,43 @@ def get_short_info_from_event_dict(
     return uid, description
 
 
-def add_attendees_to_event(event: Event, attendees: str, role: str) -> None:
+def add_attendees_to_event(event: Event, attendees: str, role: str, anonymize_email: bool) -> None:
     """Add attendees to an iCalendar event.
 
     Args:
         event (Event): iCalendar event.
         attendees (str): Semicolon-separated list of attendee email addresses.
-        role (str): Role of the attendees (e.g., "REQ-PARTICIPANT", "OPT-PARTICIPANT").
+        role (str): Role of the attendees ("ORGANIZER", "REQ-PARTICIPANT", "OPT-PARTICIPANT").
+        anonymize_email (bool): Whether to convert email addresses to a name, e.g.
+            "john.doe@example.com" to "john.doe@invalid.invalid"
     """
     for attendee in attendees.split(";"):
         if attendee := attendee.strip():
-            event.add(
-                name="attendee",
-                value=attendee,
-                parameters={"ROLE": role},
-            )
+            parameters = {}
+            # If the attendee is an email address, format it correctly
+            if "@" in attendee:
+                if anonymize_email:
+                    # Replace domain part for name-only format
+                    attendee_name = attendee.split("@")[0]
+                    parameters["CN"] = attendee_name
+                    attendee = attendee + "@invalid.invalid"
+                else:
+                    # Ensure email format for iCalendar
+                    attendee = f"mailto:{attendee}"
+            # Add attendee to the event. If the role is ORGANIZER, use the organizer field;
+            # otherwise, use attendee
+            if role == "ORGANIZER":
+                event.add("organizer", attendee, parameters=parameters)
+            else:
+                parameters["ROLE"] = role
+                event.add(
+                    name="attendee",
+                    value=attendee,
+                    parameters=parameters,
+                )
 
 
-def create_icalendar_event(json_event: dict[str, str]) -> Event:
+def create_icalendar_event(json_event: dict[str, str], anonymize_email: bool) -> Event:
     """Convert a JSON calendar entry to an iCalendar VEVENT.
 
     Args:
@@ -128,12 +147,24 @@ def create_icalendar_event(json_event: dict[str, str]) -> Event:
     )
     event.add("location", json_event.get("location", ""))
     # Add organizer and attendees
-    event.add(
-        name="organizer",
-        value=json_event.get("organizer", ""),
+    add_attendees_to_event(
+        event,
+        json_event.get("organizer", ""),
+        "ORGANIZER",
+        anonymize_email=anonymize_email,
     )
-    add_attendees_to_event(event, json_event.get("requiredAttendees", ""), "REQ-PARTICIPANT")
-    add_attendees_to_event(event, json_event.get("optionalAttendees", ""), "OPT-PARTICIPANT")
+    add_attendees_to_event(
+        event,
+        json_event.get("requiredAttendees", ""),
+        "REQ-PARTICIPANT",
+        anonymize_email=anonymize_email,
+    )
+    add_attendees_to_event(
+        event,
+        json_event.get("optionalAttendees", ""),
+        "OPT-PARTICIPANT",
+        anonymize_email=anonymize_email,
+    )
     return event
 
 
@@ -292,7 +323,9 @@ def sync_events(  # pylint: disable=too-many-locals
             logging.warning("Skipping event without UID: %s", item)
             continue
 
-        new_event: Event = create_icalendar_event(item)
+        new_event: Event = create_icalendar_event(
+            item, anonymize_email=config.get("anonymize_email", False)
+        )
         new_hash = hash_event(new_event)
 
         if uid in existing_hashes and existing_hashes[uid] == new_hash and not force:
