@@ -127,11 +127,15 @@ def add_attendees_to_event(event: Event, attendees: str, role: str, anonymize_em
                 )
 
 
-def create_icalendar_event(json_event: dict[str, str], anonymize_email: bool) -> Event:
+def create_icalendar_event(
+    json_event: dict[str, str], anonymize_email: bool, private: bool
+) -> Event:
     """Convert a JSON calendar entry to an iCalendar VEVENT.
 
     Args:
         json_event (dict): Event data from Outlook JSON export.
+        anonymize_email (bool): Whether to anonymize email addresses.
+        private (bool): Whether the calendar event is private.
 
     Returns:
         Event: Constructed iCalendar event.
@@ -146,6 +150,7 @@ def create_icalendar_event(json_event: dict[str, str], anonymize_email: bool) ->
         "dtend", datetime.fromisoformat(json_event["endWithTimeZone"]).astimezone(timezone.utc)
     )
     event.add("location", json_event.get("location", ""))
+
     # Add organizer and attendees
     add_attendees_to_event(
         event,
@@ -165,6 +170,11 @@ def create_icalendar_event(json_event: dict[str, str], anonymize_email: bool) ->
         "OPT-PARTICIPANT",
         anonymize_email=anonymize_email,
     )
+
+    # Set classification based on private setting
+    if private:
+        event.add("class", "CONFIDENTIAL")
+
     return event
 
 
@@ -324,11 +334,14 @@ def sync_events(  # pylint: disable=too-many-locals
             continue
 
         new_event: Event = create_icalendar_event(
-            item, anonymize_email=config.get("anonymize_email", False)
+            item,
+            anonymize_email=config.get("anonymize_email", False),
+            private=config.get("private", False),
         )
         new_hash = hash_event(new_event)
 
         if uid in existing_hashes and existing_hashes[uid] == new_hash and not force:
+            logging.debug("Skipping unchanged event: %s", description)
             skipped += 1
             continue
 
