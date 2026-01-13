@@ -4,8 +4,8 @@ version = "0.1.0"
 description = ""
 authors = [{ name = "Max Mehl", email = "mail@mehl.mx" }]
 readme = "README.md"
-requires-python = ">=3.12"
-dependencies = ["icalendar (>=6.2.0,<7.0.0)", "caldav (>=1.4.0,<2.0.0)"]
+requires-python = ">=3.12 ,<4.0"
+dependencies = ["icalendar (>=6.3.2,<7.0.0)", "caldav (>=2.2.3,<3.0.0)"]
 
 scripts = { "outlook-caldav-sync" = "outlook_caldav_sync.main:main" }
 
