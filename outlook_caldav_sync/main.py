@@ -249,10 +249,11 @@ def caldav_event_to_dict(event: Event) -> dict[str, str]:
     }
 
 
-def delete_missing_events(
+def delete_missing_events(  # pylint: disable=too-many-locals
     calendar: CalDAVCalendar,
     outlook_entries: list[dict[str, str]],
     delete_enabled: bool = True,
+    nosync_uids: list[str] | None = None,
     dry: bool = False,
 ) -> int:
     """Delete CalDAV events that are not in Outlook JSON but within the JSON date range.
@@ -261,10 +262,16 @@ def delete_missing_events(
         calendar (CalDAVCalendar): CalDAV calendar object.
         outlook_entries (list): List of Outlook event dictionaries.
         delete_enabled (bool): Whether deletion is enabled.
+        nosync_uids (list): List of UIDs that will be deleted if present remotely.
+        dry (bool): Dry run mode; if True, no deletions are performed.
 
     Returns:
         int: Number of deleted events.
     """
+    # Set default for nosync_uids
+    if nosync_uids is None:
+        nosync_uids = []
+
     if not delete_enabled:
         logging.info("Deletion of missing events is disabled by config.")
         return 0
@@ -309,6 +316,11 @@ def delete_missing_events(
                         e.delete()
                     logging.info("Deleted stale event: %s (UID: %s)", description, uid)
                     deleted += 1
+                elif uid in nosync_uids:
+                    if not dry:
+                        e.delete()
+                    logging.info("Deleted no-sync event: %s (UID: %s)", description, uid)
+                    deleted += 1
         except Exception as err:  # pylint: disable=broad-exception-caught
             logging.warning("Failed to delete event %s (UID: %s): %s", description, uid, err)
 
@@ -330,8 +342,11 @@ def sync_events(  # pylint: disable=too-many-locals
         config (dict): Configuration dictionary.
         calendar (Calendar): CalDAV calendar object.
         existing_hashes (dict): Existing event hashes.
+        dry (bool): Dry run mode; if True, no changes are made.
+        force (bool): Force update of events even if unchanged.
     """
-    created, updated, skipped, ignored, deleted = 0, 0, 0, 0, 0
+    created, updated, skipped, deleted = 0, 0, 0, 0
+    nosync_uids: list[str] = []
 
     # Load Outlook JSON data
     with open(config.get("outlook_calendar_file", ""), "r", encoding="utf-8") as f:
@@ -341,12 +356,16 @@ def sync_events(  # pylint: disable=too-many-locals
     for item in outlook_entries:
         uid, description = get_short_info_from_event_dict(item)
 
-        # Check for ignored categories
+        # Check for no-sync categories
         categories: list[str] = item.get("categories", [])
-        if any(cat in config.get("ignored_categories", []) for cat in categories):
+        if any(cat in config.get("nosync_categories", []) for cat in categories):
             uid, description = get_short_info_from_event_dict(item)
-            logging.debug("Skipping event in ignored categories: %s (UID: %s)", description, uid)
-            ignored += 1
+            logging.debug(
+                "Skipping event in categories that must not be synced: %s (UID: %s)",
+                description,
+                uid,
+            )
+            nosync_uids.append(uid)
             continue
 
         # Skip events without UID
@@ -384,15 +403,16 @@ def sync_events(  # pylint: disable=too-many-locals
         calendar=calendar,
         outlook_entries=outlook_entries,
         delete_enabled=config.get("delete_missing", True),
+        nosync_uids=nosync_uids,
         dry=dry,
     )
 
     logging.info(
-        "Done. Created: %d, Updated: %d, Skipped: %d, Ignored: %s, Deleted: %d",
+        "Done. Created: %d, Updated: %d, Skipped: %d, No-sync: %s, Deleted: %d",
         created,
         updated,
         skipped,
-        ignored,
+        len(nosync_uids),
         deleted,
     )
 
