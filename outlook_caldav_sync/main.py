@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import logging
+import re
 from datetime import datetime, timedelta, timezone
 
 from caldav import Calendar as CalDAVCalendar
@@ -362,6 +363,21 @@ def sync_events(  # pylint: disable=too-many-locals
             uid, description = get_short_info_from_event_dict(item)
             logging.debug(
                 "Skipping event in categories that must not be synced: %s (UID: %s)",
+                description,
+                uid,
+            )
+            nosync_uids.append(uid)
+            continue
+
+        # Check for no-sync subject regex
+        subject: str = item.get("subject", "")
+        if any(
+            regex for regex in config.get("nosync_subject_regex", [])
+            if re.search(regex, subject)
+        ):
+            uid, description = get_short_info_from_event_dict(item)
+            logging.debug(
+                "Skipping event with subject that must not be synced: %s (UID: %s)",
                 description,
                 uid,
             )
