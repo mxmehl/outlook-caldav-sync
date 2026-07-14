@@ -6,10 +6,11 @@ import json
 import logging
 import re
 from datetime import UTC, datetime, timedelta
+from typing import cast
 
-from caldav import Calendar as CalDAVCalendar
-from caldav import DAVClient
-from caldav import Event as CalDAVEvent
+from caldav.calendarobjectresource import Event as CalDAVEvent
+from caldav.collection import Calendar as CalDAVCalendar
+from caldav.davclient import DAVClient
 from icalendar import Calendar, Event
 
 
@@ -17,9 +18,7 @@ def configure_logger(log_file: str = "", verbose: bool = False) -> logging.Logge
     """Set logging options."""
     log_handlers = [logging.StreamHandler()]
     if log_file:
-        log_handlers.append(
-            logging.FileHandler(log_file, mode="a", encoding="utf-8")  # type: ignore[call-arg]
-        )
+        log_handlers.append(logging.FileHandler(log_file, mode="a", encoding="utf-8"))
 
     log = logging.getLogger()
     logging.basicConfig(
@@ -217,7 +216,9 @@ def get_existing_event_hashes(
         dict: Mapping of UID to hash for existing events.
     """
     logging.info("Fetching events from CalDAV server...")
-    remote_events = calendar.search(comp_class=CalDAVEvent, start=past, end=future)  # type: ignore[union-attr]
+    remote_events = cast(
+        "list[CalDAVEvent]", calendar.search(comp_class=CalDAVEvent, start=past, end=future)
+    )
     hashes = {}
 
     for e in remote_events:
@@ -289,10 +290,13 @@ def delete_missing_events(  # noqa: C901
     json_uids = {e.get("iCalUId", "") for e in outlook_entries if "iCalUId" in e}
 
     # Find CalDAV events in the same time window
-    remote_events: list[CalDAVEvent] = calendar.search(  # type: ignore[union-attr]
-        comp_class=CalDAVEvent,
-        start=json_start_min,
-        end=json_start_max,
+    remote_events = cast(
+        "list[CalDAVEvent]",
+        calendar.search(
+            comp_class=CalDAVEvent,
+            start=json_start_min,
+            end=json_start_max,
+        ),
     )
 
     deleted = 0
@@ -483,7 +487,7 @@ def main() -> None:
             "This action cannot be undone."
         ):
             calendar = connect_to_caldav(config)
-            remote_events: list[CalDAVEvent] = calendar.events()
+            remote_events = cast("list[CalDAVEvent]", calendar.events())
             for e in remote_events:
                 try:
                     uid, description = get_short_info_from_event_dict(
