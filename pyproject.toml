@@ -1,45 +1,75 @@
 [project]
 name = "outlook-caldav-sync"
 version = "0.1.0"
-description = ""
+description = "A Python tool to sync calendar events from an Outlook JSON export to a CalDAV server"
 authors = [{ name = "Max Mehl", email = "mail@mehl.mx" }]
-readme = "README.md"
 requires-python = ">=3.12 ,<4.0"
-dependencies = ["icalendar (>=6.3.2,<7.0.0)", "caldav (>=2.2.3,<3.0.0)"]
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+dependencies = [
+    "icalendar>=6.3.2,<7.0.0",
+    "caldav>=2.2.3,<3.0.0",
+]
 
-scripts = { "outlook-caldav-sync" = "outlook_caldav_sync.main:main" }
+[project.scripts]
+outlook-caldav-sync = "outlook_caldav_sync.main:main"
+
+[tool.uv.build-backend]
+module-name = ["outlook_caldav_sync"]
+module-root = ""
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["uv_build>=0.11.6,<0.12.0"]
+build-backend = "uv_build"
 
-[tool.poetry.group.dev.dependencies]
-bump-my-version = "^1.2.4"
-pylint = "^3.3.9"
-isort = "^6.1.0"
-black = "^25.9.0"
-mypy = "^1.18.2"
-types-pytz = "^2025.2.0.20250809"
-types-requests = "^2.32.4.20250913"
-types-icalendar = "^6.3.2.20251107"
-pytest = "^8.4.2"
+[dependency-groups]
+dev = [
+    "ruff>=0.15.10",
+    "ty>=0.0.29",
+    "bump-my-version>=1.2.4,<2",
+    "types-requests>=2.32.4.20250913,<3",
+    "pytest>=8.4.2,<9",
+]
 
-# FORMATTING settings
-[tool.isort]
-profile = "black"
+[tool.uv]
+default-groups = "all"
 
-[tool.black]
+# FORMATTING and LINTING settings
+[tool.ruff]
 line-length = 100
 
-# MYPY settings
-[tool.mypy]
-files = ["outlook_caldav_sync/*.py", "tests/*.py"]
-disable_error_code = ["import-untyped"]
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "T",
+    "FBT",
+    "LOG015",
+    "COM812",
+    "ERA001",
+    "S310",
+    "D205",
+    "D212",
+    "PTH123",
+]
+[tool.ruff.lint.extend-per-file-ignores]
+"tests/*" = ["S101", "PLR", "PT011", "ANN001", "PT019"]
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+# TY settings
+[tool.ty.src]
+include = ["outlook_caldav_sync"]
 
 # Bump-My-Version
 [tool.bumpversion]
 commit = true
 tag = true
+sign_tags = true
 allow_dirty = false
 tag_name = "v{new_version}"
 
@@ -48,3 +78,16 @@ filename = "pyproject.toml"
 regex = true
 search = "^version = \"{current_version}\""
 replace = "version = \"{new_version}\""
+
+[[tool.bumpversion.files]]
+filename = "uv.lock"
+search = """
+[[package]]
+name = "outlook-caldav-sync"
+version = "{current_version}"
+"""
+replace = """
+[[package]]
+name = "outlook-caldav-sync"
+version = "{new_version}"
+"""

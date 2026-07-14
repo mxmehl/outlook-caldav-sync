@@ -5,7 +5,7 @@ import hashlib
 import json
 import logging
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from caldav import Calendar as CalDAVCalendar
 from caldav import DAVClient
@@ -14,16 +14,15 @@ from icalendar import Calendar, Event
 
 
 def configure_logger(log_file: str = "", verbose: bool = False) -> logging.Logger:
-    """Set logging options"""
+    """Set logging options."""
     log_handlers = [logging.StreamHandler()]
     if log_file:
         log_handlers.append(
-            logging.FileHandler(log_file, mode="a", encoding="utf-8")  # type: ignore
+            logging.FileHandler(log_file, mode="a", encoding="utf-8")  # type: ignore[call-arg]
         )
 
     log = logging.getLogger()
     logging.basicConfig(
-        encoding="utf-8",
         format="[%(asctime)s] %(levelname)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
         handlers=log_handlers,
@@ -37,7 +36,7 @@ def configure_logger(log_file: str = "", verbose: bool = False) -> logging.Logge
 
 
 def ask_user_yes_no(prompt: str) -> bool:
-    """Ask the user a yes/no question and return their choice as a boolean"""
+    """Ask the user a yes/no question and return their choice as a boolean."""
     while True:
         choice = input(f"{prompt} (y/n): ").lower()
         if choice == "y":
@@ -86,12 +85,12 @@ def get_short_info_from_event_dict(
     """Extract short info from a JSON event.
 
     Args:
-        outlook_event (dict): Event data from Outlook JSON export.
+        event (dict): Event data from Outlook JSON export.
         title_key (str): Key for the event title. Default is "subject".
         start_key (str): Key for the event start time. Default is "start".
 
     Returns:
-        tuple: Tuple containing UID and dictionars (summary + start time).
+        tuple: Tuple containing UID and description (summary + start time).
     """
     uid = event.get("iCalUId") or event.get("UID", "")
     subject = event.get(title_key, "")
@@ -122,10 +121,10 @@ def add_attendees_to_event(event: Event, attendees: str, role: str, anonymize_em
                     # Replace domain part for name-only format
                     attendee_name = attendee.split("@")[0]
                     parameters["CN"] = attendee_name
-                    attendee = attendee_name + "@invalid.invalid"
+                    attendee = attendee_name + "@invalid.invalid"  # noqa: PLW2901
                 else:
                     # Ensure email format for iCalendar
-                    attendee = f"mailto:{attendee}"
+                    attendee = f"mailto:{attendee}"  # noqa: PLW2901
             # Add attendee to the event. If the role is ORGANIZER, use the organizer field;
             # otherwise, use attendee
             if role == "ORGANIZER":
@@ -155,12 +154,8 @@ def create_icalendar_event(
     event = Event()
     event.add("uid", json_event["iCalUId"])
     event.add("summary", json_event["subject"])
-    event.add(
-        "dtstart", datetime.fromisoformat(json_event["startWithTimeZone"]).astimezone(timezone.utc)
-    )
-    event.add(
-        "dtend", datetime.fromisoformat(json_event["endWithTimeZone"]).astimezone(timezone.utc)
-    )
+    event.add("dtstart", datetime.fromisoformat(json_event["startWithTimeZone"]).astimezone(UTC))
+    event.add("dtend", datetime.fromisoformat(json_event["endWithTimeZone"]).astimezone(UTC))
     event.add("location", json_event.get("location", ""))
 
     # Add organizer and attendees
@@ -222,7 +217,7 @@ def get_existing_event_hashes(
         dict: Mapping of UID to hash for existing events.
     """
     logging.info("Fetching events from CalDAV server...")
-    remote_events = calendar.search(comp_class=CalDAVEvent, start=past, end=future)  # type: ignore
+    remote_events = calendar.search(comp_class=CalDAVEvent, start=past, end=future)  # type: ignore[union-attr]
     hashes = {}
 
     for e in remote_events:
@@ -231,7 +226,7 @@ def get_existing_event_hashes(
             if ical.name == "VEVENT" and ical.get("UID"):
                 uid = str(ical.get("UID"))
                 hashes[uid] = hash_event(ical)
-        except Exception as err:  # pylint: disable=broad-exception-caught
+        except Exception as err:  # noqa: BLE001
             logging.warning("Skipping broken event %s: %s", e, err)
 
     logging.info("Found %d existing remote events", len(hashes))
@@ -250,7 +245,7 @@ def caldav_event_to_dict(event: Event) -> dict[str, str]:
     }
 
 
-def delete_missing_events(  # pylint: disable=too-many-locals
+def delete_missing_events(  # noqa: C901
     calendar: CalDAVCalendar,
     outlook_entries: list[dict[str, str]],
     delete_enabled: bool = True,
@@ -283,7 +278,7 @@ def delete_missing_events(  # pylint: disable=too-many-locals
 
     # Determine JSON event date range
     json_start_times = [
-        datetime.fromisoformat(e.get("startWithTimeZone", "")).astimezone(timezone.utc)
+        datetime.fromisoformat(e.get("startWithTimeZone", "")).astimezone(UTC)
         for e in outlook_entries
         if "startWithTimeZone" in e
     ]
@@ -294,15 +289,17 @@ def delete_missing_events(  # pylint: disable=too-many-locals
     json_uids = {e.get("iCalUId", "") for e in outlook_entries if "iCalUId" in e}
 
     # Find CalDAV events in the same time window
-    remote_events: list[CalDAVEvent] = calendar.search(  # type: ignore
-        comp_class=CalDAVEvent, start=json_start_min, end=json_start_max  # type: ignore
+    remote_events: list[CalDAVEvent] = calendar.search(  # type: ignore[union-attr]
+        comp_class=CalDAVEvent,
+        start=json_start_min,
+        end=json_start_max,
     )
 
     deleted = 0
     for e in remote_events:
         try:
             ical: dict[str, str] = caldav_event_to_dict(e.icalendar_component)
-        except Exception as err:  # pylint: disable=broad-exception-caught
+        except Exception as err:  # noqa: BLE001
             logging.warning("Skipping broken event %s: %s", e, err)
             continue
 
@@ -322,7 +319,7 @@ def delete_missing_events(  # pylint: disable=too-many-locals
                         e.delete()
                     logging.info("Deleted no-sync event: %s (UID: %s)", description, uid)
                     deleted += 1
-        except Exception as err:  # pylint: disable=broad-exception-caught
+        except Exception as err:  # noqa: BLE001
             logging.warning("Failed to delete event %s (UID: %s): %s", description, uid, err)
 
     logging.debug("Deletion pass complete. Deleted %d events.", deleted)
@@ -350,7 +347,7 @@ def sync_events(  # pylint: disable=too-many-locals
     nosync_uids: list[str] = []
 
     # Load Outlook JSON data
-    with open(config.get("outlook_calendar_file", ""), "r", encoding="utf-8") as f:
+    with open(config.get("outlook_calendar_file", ""), encoding="utf-8") as f:
         outlook_entries: list[dict] = json.load(f)
         logging.info("Processing %d events from Outlook JSON", len(outlook_entries))
 
@@ -372,8 +369,7 @@ def sync_events(  # pylint: disable=too-many-locals
         # Check for no-sync subject regex
         subject: str = item.get("subject", "")
         if any(
-            regex for regex in config.get("nosync_subject_regex", [])
-            if re.search(regex, subject)
+            regex for regex in config.get("nosync_subject_regex", []) if re.search(regex, subject)
         ):
             uid, description = get_short_info_from_event_dict(item)
             logging.debug(
@@ -411,8 +407,8 @@ def sync_events(  # pylint: disable=too-many-locals
             else:
                 logging.info("Created event: %s", description)
                 created += 1
-        except Exception as e:  # pylint: disable=broad-exception-caught
-            logging.error("Failed to upload event %s (UID: %s): %s", description, uid, e)
+        except Exception:
+            logging.exception("Failed to upload event %s (UID: %s)", description, uid)
 
     # Optional deletion step
     deleted = delete_missing_events(
@@ -469,7 +465,7 @@ def main() -> None:
     # HANDLE CONFIGURATION AND ARGUMENTS
     # --------------------------------------------------
     # Load configuration file
-    with open(args.config, "r", encoding="utf-8") as f:
+    with open(args.config, encoding="utf-8") as f:
         config = json.load(f)
 
     # Update config with command line arguments
@@ -498,7 +494,7 @@ def main() -> None:
                     if not args.dry:
                         e.delete()
                     logging.info("Deleted event: %s (UID: %s)", description, uid)
-                except Exception as err:  # pylint: disable=broad-exception-caught
+                except Exception as err:  # noqa: BLE001
                     logging.warning("Skipping broken event %s: %s", e, err)
             logging.info("Remote calendar reset complete.")
         return
@@ -507,7 +503,7 @@ def main() -> None:
     # SYNC CALENDAR
     # --------------------------------------------------
     # Set time window, based on midnight UTC today
-    now = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    now = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
     past = now - timedelta(days=config.get("dav_past_days", 3))
     future = now + timedelta(days=config.get("dav_future_days", 365))
     logging.info("Sync time window: %s to %s", past.isoformat(), future.isoformat())

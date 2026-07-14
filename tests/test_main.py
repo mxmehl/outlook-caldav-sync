@@ -1,7 +1,7 @@
-"""Unit tests for the main module of the Outlook CalDAV Sync application"""
+"""Unit tests for the main module of the Outlook CalDAV Sync application."""
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 from outlook_caldav_sync.main import (
@@ -13,41 +13,43 @@ from outlook_caldav_sync.main import (
 )
 
 
-def test_create_event_from_json(sample_json_event):
+def test_create_event_from_json(sample_json_event) -> None:
     """Test creating an iCalendar event from a JSON event."""
-    event = create_icalendar_event(sample_json_event)
+    event = create_icalendar_event(sample_json_event, anonymize_email=False, private=False)
     assert str(event.get("SUMMARY")) == "Test Event"
     assert event.get("UID") == "event-1"
 
 
-def test_hash_event_changes(sample_json_event):
+def test_hash_event_changes(sample_json_event) -> None:
     """Test that the hash changes when the event changes."""
-    event1 = create_icalendar_event(sample_json_event)
+    event1 = create_icalendar_event(sample_json_event, anonymize_email=False, private=False)
     hash1 = hash_event(event1)
     sample_json_event["subject"] = "Changed Event"
-    event2 = create_icalendar_event(sample_json_event)
+    event2 = create_icalendar_event(sample_json_event, anonymize_email=False, private=False)
     hash2 = hash_event(event2)
     assert hash1 != hash2
 
 
-def test_get_existing_event_hashes(caldav_event_mock):
+def test_get_existing_event_hashes(caldav_event_mock) -> None:
     """Test getting existing event hashes from a calendar."""
     calendar = MagicMock()
     calendar.search.return_value = [caldav_event_mock]
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     result = get_existing_event_hashes(calendar, now - timedelta(days=1), now + timedelta(days=1))
     assert "event-1" in result
     assert isinstance(result["event-1"], str)
 
 
 @patch("outlook_caldav_sync.main.delete_missing_events")
-def test_sync_events_all_equal(
-    mock_delete, sample_json_event, caldav_event_mock
-):  # pylint: disable=unused-argument
+def test_sync_events_all_equal(_mock_delete, sample_json_event, caldav_event_mock) -> None:
     """Test syncing events when all hashes are equal."""
     calendar = MagicMock()
     calendar.search.return_value = [caldav_event_mock]
-    existing_hashes = {"event-1": hash_event(create_icalendar_event(sample_json_event))}
+    existing_hashes = {
+        "event-1": hash_event(
+            create_icalendar_event(sample_json_event, anonymize_email=False, private=False)
+        )
+    }
     config = {"outlook_calendar_file": "test.json", "delete_missing": False}
 
     with patch("builtins.open", new_callable=MagicMock) as mock_open:
@@ -60,13 +62,15 @@ def test_sync_events_all_equal(
 
 
 @patch("outlook_caldav_sync.main.delete_missing_events")
-def test_sync_events_hash_mismatch(
-    mock_delete, sample_json_event, caldav_event_mock
-):  # pylint: disable=unused-argument
+def test_sync_events_hash_mismatch(_mock_delete, sample_json_event, caldav_event_mock) -> None:
     """Test syncing events when hashes do not match."""
     calendar = MagicMock()
     calendar.search.return_value = [caldav_event_mock]
-    wrong_hash = hash_event(create_icalendar_event({**sample_json_event, "subject": "Different"}))
+    wrong_hash = hash_event(
+        create_icalendar_event(
+            {**sample_json_event, "subject": "Different"}, anonymize_email=False, private=False
+        )
+    )
     existing_hashes = {"event-1": wrong_hash}
     config = {"outlook_calendar_file": "test.json", "delete_missing": False}
 
@@ -80,9 +84,7 @@ def test_sync_events_hash_mismatch(
 
 
 @patch("outlook_caldav_sync.main.delete_missing_events")
-def test_sync_events_missing_in_caldav(
-    mock_delete, sample_json_event
-):  # pylint: disable=unused-argument
+def test_sync_events_missing_in_caldav(_mock_delete, sample_json_event) -> None:
     """Test syncing events when the event is missing in CalDAV."""
     calendar = MagicMock()
     calendar.search.return_value = []
@@ -98,7 +100,7 @@ def test_sync_events_missing_in_caldav(
             calendar.add_event.assert_called_once()
 
 
-def test_delete_missing_event(caldav_event_mock, sample_json_event):
+def test_delete_missing_event(caldav_event_mock, sample_json_event) -> None:
     """Test deleting a missing event."""
     calendar = MagicMock()
     calendar.search.return_value = [caldav_event_mock]
@@ -112,7 +114,7 @@ def test_delete_missing_event(caldav_event_mock, sample_json_event):
     caldav_event_mock.delete.assert_called_once()
 
 
-def test_no_deletion_when_disabled(caldav_event_mock):
+def test_no_deletion_when_disabled(caldav_event_mock) -> None:
     """Test that no deletion occurs when delete_enabled is False."""
     calendar = MagicMock()
     calendar.search.return_value = [caldav_event_mock]

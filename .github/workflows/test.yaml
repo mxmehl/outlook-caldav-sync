@@ -1,0 +1,107 @@
+# SPDX-FileCopyrightText: 2026 DB Systel GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: Test suites
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  # Test using the tool via uv on different OSes and python versions
+  test-os-python-matrix:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      max-parallel: 10
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13", "3.14"]
+        os: [ubuntu-24.04]
+        include:
+          - python-version: "3.12"
+            os: macos-latest
+          - python-version: "3.12"
+            os: windows-latest
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/uvbuild
+        with:
+          python: ${{ matrix.python-version }}
+          uv_args: --no-dev
+      - name: Execute outlook-caldav-sync
+        run: uv run outlook-caldav-sync --help
+
+
+  # Test building the package and installing it via pip3
+  test-build-install:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.14"
+      - name: Install uv
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
+        with:
+          enable-cache: true
+      - name: Build package
+        run: uv build
+      - name: Install package
+        run: pip3 install dist/outlook_caldav_sync-*.tar.gz
+      - name: Run package
+        run: |
+          outlook-caldav-sync --help
+
+  # Run pytest
+  pytest:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/uvbuild
+      - name: Test with pytest
+        run: uv run pytest
+
+  # Quality checks
+  ruff-lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/uvbuild
+      - name: Lint with ruff
+        run: uv run ruff check
+
+  ruff-format:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/uvbuild
+      - name: Check formatting with ruff
+        run: uv run ruff format --check
+
+  ty:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/uvbuild
+      - name: Test typing with ty
+        run: uv run ty check
