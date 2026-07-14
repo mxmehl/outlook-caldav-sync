@@ -5,6 +5,8 @@ description = "A Python tool to sync calendar events from an Outlook JSON export
 authors = [{ name = "Max Mehl", email = "mail@mehl.mx" }]
 requires-python = ">=3.12 ,<4.0"
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
