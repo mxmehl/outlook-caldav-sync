@@ -370,6 +370,18 @@ def sync_events(  # pylint: disable=too-many-locals
             nosync_uids.append(uid)
             continue
 
+        # Check for no-sync showAs values
+        show_as: str = item.get("showAs", "")
+        if show_as in config.get("nosync_showas", []):
+            logging.debug(
+                "Skipping event with showAs '%s' that must not be synced: %s (UID: %s)",
+                show_as,
+                description,
+                uid,
+            )
+            nosync_uids.append(uid)
+            continue
+
         # Check for no-sync subject regex
         subject: str = item.get("subject", "")
         if any(

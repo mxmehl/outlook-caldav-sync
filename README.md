@@ -75,7 +75,8 @@ Configuration is provided as a JSON file passed via `--config`. Example
   private: false,
   delete_missing: true,
   nosync_categories: ["Reminder/Blocker"],
-  nosync_subject_regex: ["^Declined:"]
+  nosync_subject_regex: ["^Declined:"],
+  nosync_showas: ["free"]
 }
 ```
 
@@ -91,8 +92,9 @@ Configuration is provided as a JSON file passed via `--config`. Example
 | `anonymize_email`      | no       | `false`  | Replace attendee email domains with `@invalid.invalid`    |
 | `private`              | no       | `false`  | Mark all synced events as `CONFIDENTIAL`                  |
 | `delete_missing`       | no       | `true`   | Delete CalDAV events absent from the Outlook JSON         |
-| `nosync_categories`    | no       | `[]`     | Outlook categories whose events are skipped and removed   |
-| `nosync_subject_regex` | no       | `[]`     | Regex patterns; matching subjects are skipped and removed |
+| `nosync_categories`    | no       | `[]`     | Outlook categories whose events are skipped and removed                        |
+| `nosync_subject_regex` | no       | `[]`     | Regex patterns; matching subjects are skipped and removed                      |
+| `nosync_showas`        | no       | `[]`     | `showAs` values whose events are skipped and removed (e.g. `free`, `tentative`) |
 
 ## Usage
 
@@ -117,6 +119,7 @@ Events can be excluded from syncing in two ways:
 
 - **By category**: add Outlook category names to `nosync_categories`. Events with those categories are skipped during upload _and_ removed from the remote if they exist there.
 - **By subject regex**: add regular expressions to `nosync_subject_regex`. Events whose subject matches any pattern are treated the same way.
+- **By showAs value**: add Outlook `showAs` values to `nosync_showas`. Known values include `free`, `busy`, `oof`, `tentative`. Events matching are skipped and removed from the remote.
 
 This is useful for blocking personal reminders, declined meetings, or any category you do not want mirrored to your CalDAV calendar.
 

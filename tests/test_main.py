@@ -122,3 +122,19 @@ def test_no_deletion_when_disabled(caldav_event_mock) -> None:
     result = delete_missing_events(calendar, [], delete_enabled=False)
     assert result == 0
     caldav_event_mock.delete.assert_not_called()
+
+
+@patch("outlook_caldav_sync.main.delete_missing_events")
+def test_sync_events_nosync_showas(_mock_delete, sample_json_event) -> None:
+    """Test that events with a nosync_showas value are skipped."""
+    calendar = MagicMock()
+    sample_json_event["showAs"] = "free"
+    config = {
+        "outlook_calendar_file": "test.json",
+        "nosync_showas": ["free"],
+        "delete_missing": False,
+    }
+
+    with patch("json.load", return_value=[sample_json_event]), patch("builtins.open", MagicMock()):
+        sync_events(config, calendar, {})
+        calendar.add_event.assert_not_called()
