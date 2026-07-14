@@ -31,7 +31,6 @@ build-backend = "uv_build"
 dev = [
     "ruff>=0.15.10",
     "ty>=0.0.29",
-    "bump-my-version>=1.2.4,<2",
     "types-requests>=2.32.4.20250913,<3",
     "pytest>=8.4.2,<9",
 ]
@@ -64,30 +63,3 @@ convention = "google"
 # TY settings
 [tool.ty.src]
 include = ["outlook_caldav_sync"]
-
-# Bump-My-Version
-[tool.bumpversion]
-commit = true
-tag = true
-sign_tags = true
-allow_dirty = false
-tag_name = "v{new_version}"
-
-[[tool.bumpversion.files]]
-filename = "pyproject.toml"
-regex = true
-search = "^version = \"{current_version}\""
-replace = "version = \"{new_version}\""
-
-[[tool.bumpversion.files]]
-filename = "uv.lock"
-search = """
-[[package]]
-name = "outlook-caldav-sync"
-version = "{current_version}"
-"""
-replace = """
-[[package]]
-name = "outlook-caldav-sync"
-version = "{new_version}"
-"""

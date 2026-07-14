@@ -180,4 +180,4 @@ pyrightconfig.json
 # End of https://www.toptal.com/developers/gitignore/api/python
 
 # Local cache, log, build and config files
-*.json
+config*.json
