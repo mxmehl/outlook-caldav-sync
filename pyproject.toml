@@ -18,6 +18,10 @@ dependencies = [
     "caldav>=3.2.1,<3.3.0",
 ]
 
+[project.urls]
+Repository = "https://github.com/mxmehl/outlook-caldav-sync"
+Changelog = "https://github.com/mxmehl/outlook-caldav-sync/blob/main/CHANGELOG.md"
+
 [project.scripts]
 outlook-caldav-sync = "outlook_caldav_sync.main:main"
 
