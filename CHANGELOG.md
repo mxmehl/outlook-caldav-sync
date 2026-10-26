@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.2.3](https://github.com/mxmehl/outlook-caldav-sync/compare/v0.2.2...v0.2.3) (2026-10-26)
+
+
+### 🔥 Bug Fixes
+
+* **deps:** update dependency caldav to &gt;=3.4.0,&lt;3.5.0 ([#42](https://github.com/mxmehl/outlook-caldav-sync/issues/42)) ([1a8df81](https://github.com/mxmehl/outlook-caldav-sync/commit/1a8df81b67a02a85329143b36d8b3933fa19db6c))
+* **deps:** update dependency caldav to &gt;=3.5.0,&lt;3.6.0 ([#50](https://github.com/mxmehl/outlook-caldav-sync/issues/50)) ([982d8be](https://github.com/mxmehl/outlook-caldav-sync/commit/982d8be089184276d6d83628e9c46437f0badd84))
+* **deps:** update dependency caldav to &gt;=3.6.0,&lt;3.7.0 ([#57](https://github.com/mxmehl/outlook-caldav-sync/issues/57)) ([142b8ca](https://github.com/mxmehl/outlook-caldav-sync/commit/142b8ca2d24f6663c15aa1a40ab0d929369cb509))
+
+
+### ⚙️ Chores
+
+* **deps:** lock file maintenance ([#44](https://github.com/mxmehl/outlook-caldav-sync/issues/44)) ([4a18abe](https://github.com/mxmehl/outlook-caldav-sync/commit/4a18abed6dac96f11a03108bc17433930d2c45f8))
+* **deps:** lock file maintenance ([#52](https://github.com/mxmehl/outlook-caldav-sync/issues/52)) ([03a7d5f](https://github.com/mxmehl/outlook-caldav-sync/commit/03a7d5fa2898142a45fc023a278af92ec109cf72))
+* **deps:** lock file maintenance ([#58](https://github.com/mxmehl/outlook-caldav-sync/issues/58)) ([45be03e](https://github.com/mxmehl/outlook-caldav-sync/commit/45be03ef263e1e45afc1e0fedd84e6c2f05cf3a5))
+* **deps:** update actions/create-github-app-token action to v3.3.0 ([#48](https://github.com/mxmehl/outlook-caldav-sync/issues/48)) ([69ad2ac](https://github.com/mxmehl/outlook-caldav-sync/commit/69ad2ac9eb87c8de0ef80a04a03595da0cf911a9))
+* **deps:** update actions/setup-python action to v7.1.0 ([#55](https://github.com/mxmehl/outlook-caldav-sync/issues/55)) ([5423301](https://github.com/mxmehl/outlook-caldav-sync/commit/54233016c691de846bbf708098ae198dcd77dfe1))
+* **deps:** update astral-sh/setup-uv action to v10.3.0 ([#45](https://github.com/mxmehl/outlook-caldav-sync/issues/45)) ([51de36d](https://github.com/mxmehl/outlook-caldav-sync/commit/51de36d7df110b94f78e92a1f40fd88ab1919ed3))
+* **deps:** update astral-sh/setup-uv action to v10.3.1 ([#54](https://github.com/mxmehl/outlook-caldav-sync/issues/54)) ([3e42722](https://github.com/mxmehl/outlook-caldav-sync/commit/3e42722bc0c82ac9b316174f33bb155479fc50ef))
+* **deps:** update astral-sh/setup-uv action to v10.3.2 ([#56](https://github.com/mxmehl/outlook-caldav-sync/issues/56)) ([5f76bdc](https://github.com/mxmehl/outlook-caldav-sync/commit/5f76bdc995121288ccd2a0085f9f8188392aea93))
+* **deps:** update dependency python to 3.15 ([#47](https://github.com/mxmehl/outlook-caldav-sync/issues/47)) ([cc6703b](https://github.com/mxmehl/outlook-caldav-sync/commit/cc6703b1d18efc92f6b4964c1861b1f543483e00))
+* **deps:** update dependency uv_build to &gt;=0.13.0,&lt;0.14.0 ([#46](https://github.com/mxmehl/outlook-caldav-sync/issues/46)) ([984b026](https://github.com/mxmehl/outlook-caldav-sync/commit/984b026dd2d54745599799dae2c34392e253e3e9))
+* **deps:** update pypa/gh-action-pypi-publish action to v1.14.3 ([#53](https://github.com/mxmehl/outlook-caldav-sync/issues/53)) ([9b67115](https://github.com/mxmehl/outlook-caldav-sync/commit/9b67115a398bbdfa4d8bf9d01e62ac8de1a56ae1))
+* **deps:** update zizmorcore/zizmor-action action to v0.7.0 ([#49](https://github.com/mxmehl/outlook-caldav-sync/issues/49)) ([1ebae92](https://github.com/mxmehl/outlook-caldav-sync/commit/1ebae92e227966d5b550ba8fd29b10b689a8ab84))
+* **deps:** update zizmorcore/zizmor-action action to v0.7.1 ([#51](https://github.com/mxmehl/outlook-caldav-sync/issues/51)) ([59c8aa7](https://github.com/mxmehl/outlook-caldav-sync/commit/59c8aa72e3faad430146a56ae81a79458b1909d6))
+* **deps:** update zizmorcore/zizmor-action action to v0.8.0 ([#59](https://github.com/mxmehl/outlook-caldav-sync/issues/59)) ([9e3d8c1](https://github.com/mxmehl/outlook-caldav-sync/commit/9e3d8c10734e74a25d9621e16411a55c38b11a1c))
+
 ## [0.2.2](https://github.com/mxmehl/outlook-caldav-sync/compare/v0.2.1...v0.2.2) (2026-09-28)
 
 
