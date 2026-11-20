@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/mxmehl/outlook-caldav-sync/compare/v0.2.3...v0.3.0) (2026-11-20)
+
+
+### 🚀 New Features
+
+* add support for Python 3.15 ([#66](https://github.com/mxmehl/outlook-caldav-sync/issues/66)) ([ee92487](https://github.com/mxmehl/outlook-caldav-sync/commit/ee92487d43b8eb0ad47b38ab25b2783053e9b12c))
+
 ## [0.2.3](https://github.com/mxmehl/outlook-caldav-sync/compare/v0.2.2...v0.2.3) (2026-11-16)
 
 
