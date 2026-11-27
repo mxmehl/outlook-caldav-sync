@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.1](https://github.com/mxmehl/outlook-caldav-sync/compare/v0.3.0...v0.3.1) (2026-11-27)
+
+
+### ⚙️ Chores
+
+* **deps:** lock file maintenance ([#70](https://github.com/mxmehl/outlook-caldav-sync/issues/70)) ([3f62539](https://github.com/mxmehl/outlook-caldav-sync/commit/3f62539d3e99d3857d461867c10b3285c8bbeb55))
+* **deps:** update actions/create-github-app-token action to v3.4.0 ([#68](https://github.com/mxmehl/outlook-caldav-sync/issues/68)) ([553e0dc](https://github.com/mxmehl/outlook-caldav-sync/commit/553e0dcec2031fba9d1f5f034637c765a8b535c3))
+* **deps:** update astral-sh/setup-uv action to v10.4.0 ([#71](https://github.com/mxmehl/outlook-caldav-sync/issues/71)) ([310f812](https://github.com/mxmehl/outlook-caldav-sync/commit/310f812b5cae22da3dd4387fb528610e2adabc14))
+* **deps:** update zizmorcore/zizmor-action action to v0.9.1 ([#72](https://github.com/mxmehl/outlook-caldav-sync/issues/72)) ([433c5d5](https://github.com/mxmehl/outlook-caldav-sync/commit/433c5d5d59f2dd337aa09fe056b6c19bcc3b72f5))
+* **deps:** update zizmorcore/zizmor-action action to v0.9.2 ([#73](https://github.com/mxmehl/outlook-caldav-sync/issues/73)) ([a4d55f3](https://github.com/mxmehl/outlook-caldav-sync/commit/a4d55f3683bc35e53bdc4b2d831cc97c2490ad31))
+
 ## [0.3.0](https://github.com/mxmehl/outlook-caldav-sync/compare/v0.2.3...v0.3.0) (2026-11-20)
 
 
